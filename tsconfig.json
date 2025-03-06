@@ -1,12 +1,21 @@
 {
   "compilerOptions": {
-    "rootDir": "./src",         // Tous les fichiers source seront sous le répertoire src
-    "outDir": "./dist",         // Le répertoire de sortie pour les fichiers compilés
-    "esModuleInterop": true,    // Compatibilité avec les modules CommonJS
-    "strict": true,             // Activer la vérification stricte des types
-    "skipLibCheck": true        // Ignorer les vérifications des fichiers de type
+    "rootDir": "./src",           // Dossier source
+    "outDir": "./dist",           // Dossier de sortie pour les fichiers compilés
+    "esModuleInterop": true,      // Compatibilité avec les modules CommonJS
+    "strict": true,               // Mode strict pour TypeScript
+    "skipLibCheck": true,         // Ignore les vérifications des types des bibliothèques
+    "moduleResolution": "node",   // Résolution des modules comme Node.js
+    "target": "ES6",              // Compilation en ES6
+    "module": "commonjs", 
+    "resolveJsonModule": true, 
+    "allowSyntheticDefaultImports": true         // Utilisation du module CommonJS
   },
   "include": [
-    "src/**/*"                  // Inclure tous les fichiers sous le répertoire src
+    "src/**/*"                    // Inclure tous les fichiers dans le dossier `src`
+  ],
+  "exclude": [
+    "node_modules",               // Exclure le dossier `node_modules`
+    "dist"                         // Exclure le dossier `dist` (fichiers compilés)
   ]
 }
