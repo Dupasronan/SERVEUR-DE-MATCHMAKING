@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS matchs (
     game_board CHAR(9) DEFAULT '---------',  -- 9 cases pour le morpion ('-' représente une case vide)
     status ENUM('pending', 'in_progress', 'finished') DEFAULT 'pending',
     id_winner INT DEFAULT NULL,
+    current_turn INT DEFAULT 1,  -- Ajout de la colonne current_turn
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_player1) REFERENCES players(id_player) ON DELETE CASCADE,
     FOREIGN KEY (id_player2) REFERENCES players(id_player) ON DELETE CASCADE,
