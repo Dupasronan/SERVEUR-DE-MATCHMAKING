@@ -1,105 +1,75 @@
 import { Request, Response } from 'express';
-import { promisePool } from '../../database/connection'; // Mise à jour de l'importation
-import { RowDataPacket } from 'mysql2'; // Import des types nécessaires
+import { promisePool } from '../../database/connection';
+import { RowDataPacket } from 'mysql2';
+import { Queue } from '../models/Queue';
+import { Players } from '../models/Players';
 
 export class QueueController {
-  // Créer une queue
-  static async createQueue(req: Request, res: Response): Promise<void> {
-    const { ip, port } = req.body;
+  /**
+   * Ajouter un joueur à la file d'attente
+   */
+  static async addPlayerToQueue(req: Request, res: Response): Promise<void> {
+    const { playerId } = req.params;
+    const { priority } = req.body;
+    const ip = req.ip;
+    const port = req.socket.remotePort;
 
-    if (!ip || !port) {
-      res.status(400).send({ message: 'Les champs IP et port sont requis.' });
+    if (!priority) {
+      res.status(400).send({ message: 'La priorité est requise.' });
       return;
     }
 
     try {
-      // Insérer une nouvelle queue dans la base de données
+      // Vérifier si le joueur existe
+      const [playerRows] = await promisePool.query<RowDataPacket[]>(
+        'SELECT * FROM players WHERE id_player = ?', [playerId]
+      );
+      if (playerRows.length === 0) {
+        res.status(404).send({ message: 'Joueur non trouvé.' });
+        return;
+      }
+
+      // Créer une instance de Players
+      const player = new Players(playerRows[0].id_player, playerRows[0].pseudo, playerRows[0].created_at);
+
+      // Vérifier si le joueur est déjà dans la queue
+      const [existingQueue] = await promisePool.query<RowDataPacket[]>(
+        'SELECT * FROM queue WHERE id_player = ?', [playerId]
+      );
+      if (existingQueue.length > 0) {
+        res.status(409).send({ message: 'Le joueur est déjà dans la file d\'attente.' });
+        return;
+      }
+
+      // Ajouter le joueur dans la queue
       await promisePool.query(
-        'INSERT INTO queue (ip, port) VALUES (?, ?)', 
-        [ip, port]
+        'INSERT INTO queue (id_player, ip, port, date_entry, priority) VALUES (?, ?, ?, NOW(), ?)',
+        [playerId, ip, port, priority]
       );
 
-      res.status(201).send({ message: 'Queue créée avec succès.' });
-    } catch (error) {
-      console.error("Erreur MariaDB :", error);
-      res.status(500).send({ message: 'Erreur lors de la création de la queue', error });
-    }
-  }
-  
-  // Lister toutes les files d'attentes
-  static async getQueues(req: Request, res: Response): Promise<void> {
-    try {
-      const [queues] = await promisePool.query<RowDataPacket[]>(
-        'SELECT id_queue, ip, port, is_chosen FROM queue'
-      );
-
-      res.status(200).send({ queues });
-    } catch (error) {
-      console.error("Erreur MariaDB :", error);
-      res.status(500).send({ message: 'Erreur lors de la récupération des files d\'attentes', error });
-    }
-  }
-
-  // Choisir une file d'attente
-  static async chooseQueue(req: Request, res: Response): Promise<void> {
-    const { queueId } = req.params;
-
-    try {
-      // Choisir la file d'attente
-      await promisePool.query(
-        'UPDATE queue SET is_chosen = 1 WHERE id_queue = ?',
-        [queueId]
-      );
-
-      res.status(200).send({ message: 'File d\'attente choisie avec succès.' });
-    } catch (error) {
-      console.error("Erreur MariaDB :", error);
-      res.status(500).send({ message: 'Erreur lors du choix de la file d\'attente', error });
-    }
-  }
-
-  // Changer de file d'attente
-  static async switchQueue(req: Request, res: Response): Promise<void> {
-    const { queueId } = req.params;
-
-    try {
-      // Changer de file d'attente
-      await promisePool.query(
-        'UPDATE queue SET is_chosen = 0 WHERE id_queue = ?',
-        [queueId]
-      );
-
-      res.status(200).send({ message: 'Changement de file d\'attente effectué avec succès.' });
-    } catch (error) {
-      console.error("Erreur MariaDB :", error);
-      res.status(500).send({ message: 'Erreur lors du changement de file d\'attente', error });
-    }
-  }
-
-  // Ajouter un joueur à la file d'attente
-  static async addPlayerToQueue(req: Request, res: Response): Promise<void> {
-    const { playerId } = req.params;
-
-    try {
-      // Ajouter le joueur à la file d'attente
-      await promisePool.query(
-        'INSERT INTO queue (id_player, ip, port, date_entry) SELECT id_player, ?, ?, NOW() FROM players WHERE id_player = ?',
-        [req.ip, req.socket.remotePort, playerId]
-      );
-
-      res.status(201).send({ message: 'Joueur ajouté à la file d\'attente.' });
+      res.status(201).send({ message: `Joueur ${player.pseudo} ajouté à la file d'attente.` });
     } catch (error) {
       console.error("Erreur MariaDB :", error);
       res.status(500).send({ message: 'Erreur lors de l\'ajout du joueur à la file d\'attente', error });
     }
   }
 
-  // Lister tous les joueurs dans la file d'attente
+  /**
+   * Récupérer tous les joueurs dans la file d'attente
+   */
   static async getPlayersInQueue(req: Request, res: Response): Promise<void> {
     try {
-      const [queue] = await promisePool.query<RowDataPacket[]>(
-        'SELECT id_player, pseudo, ip, port, date_entry FROM queue JOIN players ON queue.id_player = players.id_player'
-      );
+      const [rows] = await promisePool.query<RowDataPacket[]>(`
+        SELECT q.id, q.ip, q.port, q.date_entry, q.priority, p.id_player, p.pseudo, p.created_at 
+        FROM queue q
+        JOIN players p ON q.id_player = p.id_player
+        ORDER BY q.priority ASC, q.date_entry ASC
+      `);
+
+      const queue = rows.map(row => {
+        const player = new Players(row.id_player, row.pseudo, row.created_at);
+        return new Queue(row.id, row.id_player, row.ip, row.port, row.date_entry, row.priority);  // Pass the playerId instead of the player object
+      });
 
       res.status(200).send({ queue });
     } catch (error) {
@@ -108,36 +78,38 @@ export class QueueController {
     }
   }
 
-  // Mettre à jour une file d'attente
+  /**
+   * Mettre à jour les informations d'une file d'attente
+   */
   static async updateQueue(req: Request, res: Response): Promise<void> {
     const { queueId } = req.params;
-    const { ip, port } = req.body;
+    const { ip, port, priority } = req.body;
 
-    if (!ip || !port) {
-      res.status(400).send({ message: 'Les champs IP et port sont requis.' });
+    if (!ip || !port || !priority) {
+      res.status(400).send({ message: 'Les champs IP, port et priorité sont requis.' });
       return;
     }
 
     try {
-      // Mettre à jour les informations de la queue dans la base de données
       await promisePool.query(
-        'UPDATE queue SET ip = ?, port = ? WHERE id_queue = ?',
-        [ip, port, queueId]
+        'UPDATE queue SET ip = ?, port = ?, priority = ? WHERE id = ?',
+        [ip, port, priority, queueId]
       );
 
-      res.status(200).send({ message: 'Informations mises à jour dans la file d\'attente.' });
+      res.status(200).send({ message: 'File d\'attente mise à jour avec succès.' });
     } catch (error) {
       console.error("Erreur MariaDB :", error);
       res.status(500).send({ message: 'Erreur lors de la mise à jour de la file d\'attente', error });
     }
   }
 
-  // Retirer un joueur de la file d'attente
+  /**
+   * Retirer un joueur de la file d'attente
+   */
   static async removeFromQueue(req: Request, res: Response): Promise<void> {
     const { playerId } = req.params;
 
     try {
-      // Vérifier si le joueur est dans la file d'attente
       const [existingQueue] = await promisePool.query<RowDataPacket[]>(
         'SELECT * FROM queue WHERE id_player = ?', [playerId]
       );
@@ -147,29 +119,25 @@ export class QueueController {
         return;
       }
 
-      // Supprimer le joueur de la file d'attente
       await promisePool.query('DELETE FROM queue WHERE id_player = ?', [playerId]);
 
       res.status(200).send({ message: 'Joueur retiré de la file d\'attente.' });
     } catch (error) {
       console.error("Erreur MariaDB :", error);
-      res.status(500).send({ message: 'Erreur lors du retrait de la file d\'attente', error });
+      res.status(500).send({ message: 'Erreur lors du retrait du joueur de la file d\'attente', error });
     }
   }
 
-  // Supprimer une file d'attente
-  static async deleteQueue(req: Request, res: Response): Promise<void> {
+  /**
+   * Vider complètement la file d'attente
+   */
+  static async clearQueue(req: Request, res: Response): Promise<void> {
     try {
-      // Supprimer tous les joueurs de la file d'attente
       await promisePool.query('DELETE FROM queue');
-
-      res.status(200).send({ message: 'File d\'attente supprimée.' });
+      res.status(200).send({ message: 'File d\'attente complètement vidée.' });
     } catch (error) {
       console.error("Erreur MariaDB :", error);
-      res.status(500).send({ message: 'Erreur lors de la suppression de la file d\'attente', error });
+      res.status(500).send({ message: 'Erreur lors du nettoyage de la file d\'attente', error });
     }
   }
 }
-
-
-
