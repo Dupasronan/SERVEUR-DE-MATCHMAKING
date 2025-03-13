@@ -71,7 +71,7 @@ export class MatchmakingController {
         return;
       }
 
-      await promisePool.query('UPDATE matchs SET status = ? WHERE id_match = ?', ['started', matchId]);
+      await promisePool.query('UPDATE matchs SET status = ? WHERE id_match = ?', ['in_progress', matchId]); // Changer 'started' en 'in_progress'
       res.status(200).send({ message: 'Match lancé avec succès.' });
     } catch (error) {
       console.error("Erreur MariaDB :", error);
@@ -97,7 +97,7 @@ export class MatchmakingController {
         return;
       }
 
-      if (match[0].status !== 'started') {
+      if (match[0].status !== 'in_progress') { // Vérifier que le match est en cours
         res.status(400).send({ message: 'Le match n\'est pas en cours.' });
         return;
       }
@@ -113,8 +113,8 @@ export class MatchmakingController {
 
       if (checkWin(gameBoard, playerMark)) {
         await promisePool.query(
-          'UPDATE matchs SET game_board = ?, status = ?, winner_id = ? WHERE id_match = ?',
-          [gameBoard.join(''), 'finished', playerId, matchId]
+          'UPDATE matchs SET game_board = ?, status = ?, id_winner = ? WHERE id_match = ?',
+          [gameBoard.join(''), 'finished', playerId, matchId] 
         );
         res.status(200).send({ message: 'Le joueur a gagné.', gameBoard: gameBoard.join('') });
       } else {
