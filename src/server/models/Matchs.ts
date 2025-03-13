@@ -6,7 +6,7 @@ export class Matchs {
   player2: Players;
   game_board: string;
   status: "pending" | "in_progress" | "finished";
-  winner: Players | null;
+  winner: number | null; // Utilisation de l'ID du gagnant plutôt qu'un objet Players
   created_at: Date;
 
   constructor(
@@ -15,7 +15,7 @@ export class Matchs {
     player2: Players,
     game_board: string = "---------",
     status: "pending" | "in_progress" | "finished" = "pending",
-    winner: Players | null = null,
+    winner: number | null = null, // Utilisation de l'ID du gagnant
     created_at: Date
   ) {
     this.id_match = id_match;
@@ -38,10 +38,10 @@ export class Matchs {
   }
 
   // Déclarer un gagnant
-  declareWinner(winner: Players): void {
+  declareWinner(winner: number): void { // Le gagnant est un ID de joueur
     this.winner = winner;
     this.status = "finished";
-    console.log(`Le gagnant est ${winner.pseudo}`);
+    console.log(`Le gagnant est le joueur avec l'ID ${winner}`);
   }
 
   // Réinitialiser le plateau
@@ -53,8 +53,14 @@ export class Matchs {
 
   // Créer un match depuis une base de données
   static fromDB(row: any, player1: Players, player2: Players): Matchs {
-    return new Matchs(row.id_match, player1, player2, row.game_board, row.status, row.winner ? new Players(row.winner, "", new Date()) : null, new Date(row.created_at));
+    return new Matchs(
+      row.id_match,
+      player1,
+      player2,
+      row.game_board,
+      row.status,
+      row.id_winner, // Utilisation de l'ID du gagnant
+      new Date(row.created_at)
+    );
   }
 }
-
-
