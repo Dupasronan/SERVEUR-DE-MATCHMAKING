@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS queue (
     ip VARCHAR(255) NOT NULL,
     port INT NOT NULL,
     date_entry DATETIME DEFAULT CURRENT_TIMESTAMP,
+    priority INT NOT NULL,  -- Priorité dans la file d'attente
     FOREIGN KEY (id_player) REFERENCES players(id_player) ON DELETE CASCADE
 );
 
