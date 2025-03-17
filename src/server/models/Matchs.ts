@@ -1,4 +1,4 @@
-import { Players } from "./Players";
+import { Players } from "../models/Players";
 
 export class Matchs {
   id_match: number;
@@ -6,7 +6,8 @@ export class Matchs {
   player2: Players;
   game_board: string;
   status: "pending" | "in_progress" | "finished";
-  winner: number | null; // Utilisation de l'ID du gagnant plutôt qu'un objet Players
+  id_winner: number | null; // ID du gagnant
+  current_turn: number; // ID du joueur dont c'est le tour
   created_at: Date;
 
   constructor(
@@ -15,7 +16,8 @@ export class Matchs {
     player2: Players,
     game_board: string = "---------",
     status: "pending" | "in_progress" | "finished" = "pending",
-    winner: number | null = null, // Utilisation de l'ID du gagnant
+    id_winner: number | null = null,
+    current_turn: number = 1, // Joueur 1 commence
     created_at: Date
   ) {
     this.id_match = id_match;
@@ -23,7 +25,8 @@ export class Matchs {
     this.player2 = player2;
     this.game_board = game_board;
     this.status = status;
-    this.winner = winner;
+    this.id_winner = id_winner;
+    this.current_turn = current_turn;
     this.created_at = created_at;
   }
 
@@ -38,8 +41,8 @@ export class Matchs {
   }
 
   // Déclarer un gagnant
-  declareWinner(winner: number): void { // Le gagnant est un ID de joueur
-    this.winner = winner;
+  declareWinner(winner: number): void {
+    this.id_winner = winner;
     this.status = "finished";
     console.log(`Le gagnant est le joueur avec l'ID ${winner}`);
   }
@@ -48,7 +51,7 @@ export class Matchs {
   resetBoard(): void {
     this.game_board = "---------";
     this.status = "pending";
-    this.winner = null;
+    this.id_winner = null;
   }
 
   // Créer un match depuis une base de données
@@ -59,8 +62,22 @@ export class Matchs {
       player2,
       row.game_board,
       row.status,
-      row.id_winner, // Utilisation de l'ID du gagnant
+      row.id_winner,
+      row.current_turn,
       new Date(row.created_at)
     );
+  }
+
+  // Créer un match depuis la base de données en récupérant les joueurs
+  static async fromDBWithPlayers(row: any): Promise<Matchs> {
+    // Récupérer les joueurs en utilisant leurs IDs
+    const player1 = await Players.getById(row.id_player1);
+    const player2 = await Players.getById(row.id_player2);
+
+    if (!player1 || !player2) {
+      throw new Error("Un ou plusieurs joueurs non trouvés.");
+    }
+
+    return this.fromDB(row, player1, player2);
   }
 }
