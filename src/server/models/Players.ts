@@ -1,158 +1,103 @@
 import { promisePool } from '../../database/connection';
-import { RowDataPacket, OkPacket } from 'mysql2';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
-export class Players {
+export interface Player extends RowDataPacket {
   id_player: number;
   pseudo: string;
   created_at: Date;
+}
 
-  constructor(id_player: number, pseudo: string, created_at: Date) {
-    this.id_player = id_player;
-    this.pseudo = pseudo;
-    this.created_at = created_at;
-  }
-
-  // Afficher les informations du joueur
-  displayInfo(): void {
-    console.log(`ID: ${this.id_player}, Pseudo: ${this.pseudo}, Créé le: ${this.created_at}`);
-  }
-
-  // Modifier le pseudo du joueur, avec une validation stricte
-  updatePseudo(newPseudo: string): void {
-    if (newPseudo.trim().length === 0) {
-      console.log("Le pseudo ne peut pas être vide ou constitué uniquement d'espaces !");
-      return;
-    }
-
-    if (newPseudo === this.pseudo) {
-      console.log("Le nouveau pseudo est identique à l'ancien.");
-      return;
-    }
-
-    this.pseudo = newPseudo;
-    console.log(`Pseudo mis à jour : ${this.pseudo}`);
-  }
-
-  // Comparer deux joueurs
-  isEqual(otherPlayer: Players): boolean {
-    return this.id_player === otherPlayer.id_player;
-  }
-
-  // Créer un joueur depuis une ligne de base de données
-  static fromDB(row: RowDataPacket): Players {
-    if (!row.id_player || !row.pseudo || !row.created_at) {
-      throw new Error("Données manquantes pour créer un joueur");
-    }
-
-    return new Players(row.id_player, row.pseudo, new Date(row.created_at));
-  }
-
-  // Convertir l'objet joueur en un format compatible avec la base de données
-  toDB(): any {
-    return {
-      id_player: this.id_player,
-      pseudo: this.pseudo,
-      created_at: this.created_at.toISOString(),
-    };
-  }
-
-  // Vérifier si un joueur a été créé dans les 24 dernières heures
-  wasCreatedRecently(): boolean {
-    const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
-    return new Date().getTime() - this.created_at.getTime() <= twentyFourHoursInMs;
-  }
-
-  // Récupérer les informations de joueur sous forme d'objet JSON
-  toJSON(): object {
-    return {
-      id_player: this.id_player,
-      pseudo: this.pseudo,
-      created_at: this.created_at.toISOString(),
-    };
-  }
-
-  // Récupérer un joueur à partir de l'ID depuis la base de données
-  static async getById(id: number): Promise<Players | null> {
+export class Players {
+  
+  static async getById(id_player: number): Promise<Player | null> {
     try {
-      const [rows] = await promisePool.query<RowDataPacket[]>(
-        'SELECT * FROM players WHERE id_player = ?',
-        [id]
+      const [rows] = await promisePool.query<Player[]>(
+        'SELECT * FROM players WHERE id_player = ?', 
+        [id_player]
       );
-      return rows.length > 0 ? this.fromDB(rows[0]) : null;
+      return rows.length ? rows[0] : null;
     } catch (error) {
-      console.error(`Erreur lors de la récupération du joueur par ID : ${error}`);
-      throw error;
+      console.error(`Erreur lors de la récupération du joueur avec l'ID ${id_player}:`, error);
+      return null;
     }
   }
 
-  // Ajouter un joueur dans la base de données
-  static async addNewPlayer(pseudo: string): Promise<Players> {
+  static async create(pseudo: string): Promise<number | null> {
     try {
-      const [result] = await promisePool.query<OkPacket>(
+      const [result] = await promisePool.query<ResultSetHeader>(
         'INSERT INTO players (pseudo) VALUES (?)',
         [pseudo]
       );
-      const id_player = result.insertId;
-      return new Players(id_player, pseudo, new Date());
+      return result.insertId;
     } catch (error) {
-      console.error(`Erreur lors de l'ajout du joueur : ${error}`);
-      throw error;
-    }
-  }
-
-  // Récupérer un joueur par pseudo
-static async getByPseudo(pseudo: string): Promise<Players | null> {
-  try {
-    const [rows] = await promisePool.query<RowDataPacket[]>(
-      'SELECT * FROM players WHERE pseudo = ?', [pseudo]
-    );
-
-    if (rows.length === 0) {
+      console.error(`Erreur lors de la création du joueur avec le pseudo "${pseudo}":`, error);
       return null;
     }
-
-    return this.fromDB(rows[0]); // Convertir en instance de Players
-  } catch (error) {
-    console.error('Erreur lors de la récupération du joueur par pseudo :', error);
-    throw error;
   }
-}
 
-
-  // Mettre à jour un joueur dans la base de données
-  static async updatePlayer(player: Players): Promise<void> {
+  static async exists(pseudo: string): Promise<boolean> {
     try {
-      await promisePool.query<OkPacket>(
-        'UPDATE players SET pseudo = ? WHERE id_player = ?',
-        [player.pseudo, player.id_player]
+      const [rows] = await promisePool.query<Player[]>(
+        'SELECT id_player FROM players WHERE pseudo = ?', 
+        [pseudo]
       );
+      return rows.length > 0;
     } catch (error) {
-      console.error(`Erreur lors de la mise à jour du joueur : ${error}`);
-      throw error;
+      console.error(`Erreur lors de la vérification du pseudo "${pseudo}":`, error);
+      return false;
     }
   }
 
-  // Supprimer un joueur par ID
-  static async deletePlayer(playerId: number): Promise<void> {
+  static async getAllPlayers(): Promise<Player[]> {
     try {
-      await promisePool.query('DELETE FROM players WHERE id_player = ?', [playerId]);
-    } catch (error) {
-      console.error(`Erreur lors de la suppression du joueur : ${error}`);
-      throw error;
-    }
-  }
-
-  // Récupérer tous les joueurs sous forme d'objets JSON
-  static async getAllPlayers(): Promise<object[]> {
-    try {
-      const [rows] = await promisePool.query<RowDataPacket[]>(
+      const [rows] = await promisePool.query<Player[]>(
         'SELECT * FROM players'
       );
-      return rows.map(row => this.fromDB(row).toJSON());
+      return rows;
     } catch (error) {
-      console.error(`Erreur lors de la récupération des joueurs : ${error}`);
-      throw error;
+      console.error("Erreur lors de la récupération de tous les joueurs:", error);
+      return [];
+    }
+  }
+
+  static async getByPseudo(pseudo: string): Promise<Player | null> {
+    try {
+      const [rows] = await promisePool.query<Player[]>(
+        'SELECT * FROM players WHERE pseudo = ?', 
+        [pseudo]
+      );
+      return rows.length ? rows[0] : null;
+    } catch (error) {
+      console.error(`Erreur lors de la récupération du joueur avec le pseudo "${pseudo}":`, error);
+      return null;
+    }
+  }
+
+  static async updatePlayer(id_player: number, pseudo: string): Promise<boolean> {
+    try {
+      const [result] = await promisePool.query<ResultSetHeader>(
+        'UPDATE players SET pseudo = ? WHERE id_player = ?',
+        [pseudo, id_player]
+      );
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error(`Erreur lors de la mise à jour du joueur avec l'ID ${id_player}:`, error);
+      return false;
+    }
+  }
+
+  static async deletePlayer(id_player: number): Promise<boolean> {
+    try {
+      const [result] = await promisePool.query<ResultSetHeader>(
+        'DELETE FROM players WHERE id_player = ?',
+        [id_player]
+      );
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.error(`Erreur lors de la suppression du joueur avec l'ID ${id_player}:`, error);
+      return false;
     }
   }
 }
+
 
