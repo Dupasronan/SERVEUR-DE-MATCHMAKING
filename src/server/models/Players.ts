@@ -7,7 +7,18 @@ export interface Player extends RowDataPacket {
   created_at: Date;
 }
 
+
 export class Players {
+  id_player: number;
+  pseudo: string;
+  created_at: Date;
+
+  constructor(id_player: number, pseudo: string, created_at: Date) {
+    this.id_player = id_player;
+    this.pseudo = pseudo;
+    this.created_at = created_at;
+  }
+
   
   static async getById(id_player: number): Promise<Player | null> {
     try {
