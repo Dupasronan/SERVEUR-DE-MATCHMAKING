@@ -68,7 +68,9 @@ export class QueueController {
 
       const queue = rows.map(row => {
         const player = new Players(row.id_player, row.pseudo, row.created_at);
-        return new Queue(row.id, row.id_player, row.ip, row.port, row.date_entry, row.priority);  // Pass the playerId instead of the player object
+        const queueEntry = new Queue(row.id, row.id_player, row.ip, row.port, row.date_entry, row.priority);
+        queueEntry.attachPlayer(player);
+        return queueEntry;
       });
 
       res.status(200).send({ queue });
