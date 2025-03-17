@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { promisePool } from '../../database/connection';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { Players } from '../models/Players';
+import { Matchs } from '../models/Matchs';
 
 // Fonction pour vérifier si un joueur a gagné
 function checkWin(gameBoard: string[], playerMark: string): boolean {
@@ -26,6 +28,14 @@ export class MatchmakingController {
     }
 
     try {
+      const player1 = await Players.getById(player1Id);
+      const player2 = await Players.getById(player2Id);
+
+      if (!player1 || !player2) {
+        res.status(404).send({ message: 'Un ou plusieurs joueurs non trouvés.' });
+        return;
+      }
+
       const [queuePlayers] = await promisePool.query<RowDataPacket[]>(
         'SELECT id_player FROM queue WHERE id_player IN (?, ?)', 
         [player1Id, player2Id]
@@ -59,7 +69,7 @@ export class MatchmakingController {
     }
 
     try {
-      const [match] = await promisePool.query<RowDataPacket[]>('SELECT status FROM matchs WHERE id_match = ?', [matchId]);
+      const [match] = await promisePool.query<RowDataPacket[]>('SELECT * FROM matchs WHERE id_match = ?', [matchId]);
 
       if (!match.length) {
         res.status(404).send({ message: 'Match non trouvé.' });
@@ -71,8 +81,10 @@ export class MatchmakingController {
         return;
       }
 
-      await promisePool.query('UPDATE matchs SET status = ? WHERE id_match = ?', ['in_progress', matchId]); // Changer 'started' en 'in_progress'
-      res.status(200).send({ message: 'Match lancé avec succès.' });
+      const matchWithPlayers = await Matchs.fromDBWithPlayers(match[0]);
+
+      await promisePool.query('UPDATE matchs SET status = ? WHERE id_match = ?', ['in_progress', matchId]);
+      res.status(200).send({ message: 'Match lancé avec succès.', match: matchWithPlayers });
     } catch (error) {
       console.error("Erreur MariaDB :", error);
       res.status(500).send({ message: 'Erreur lors du lancement du match.' });
@@ -97,7 +109,7 @@ export class MatchmakingController {
         return;
       }
 
-      if (match[0].status !== 'in_progress') { // Vérifier que le match est en cours
+      if (match[0].status !== 'in_progress') {
         res.status(400).send({ message: 'Le match n\'est pas en cours.' });
         return;
       }
@@ -148,3 +160,6 @@ export class MatchmakingController {
     }
   }
 }
+
+
+
