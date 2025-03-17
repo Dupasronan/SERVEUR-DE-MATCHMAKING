@@ -27,6 +27,14 @@ export class Queue {
   }
 
   /**
+   * Associer une instance de Players à la file d'attente
+   */
+
+  attachPlayer(player: Players): void {
+    this.player = player;
+  }
+
+  /**
    * Convertir les données de MariaDB en instance Queue
    */
   static fromDB(data: RowDataPacket): Queue {
@@ -67,14 +75,7 @@ export class Queue {
   static clearQueue(): Queue[] {
     return [];
   }
-
-  /**
-   * Associer une instance de Players à la file d'attente
-   */
-  attachPlayer(player: Players): void {
-    this.player = player;
-  }
-
+  
   /**
    * Préparer les données pour l'insertion dans MariaDB
    */
