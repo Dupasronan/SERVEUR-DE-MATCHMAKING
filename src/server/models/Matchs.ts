@@ -1,9 +1,9 @@
-import { Players } from "../models/Players";
+import { Players, Player } from "../models/Players";
 
 export class Matchs {
   id_match: number;
-  player1: Players;
-  player2: Players;
+  player1: Player;
+  player2: Player;
   game_board: string;
   status: "pending" | "in_progress" | "finished";
   id_winner: number | null; // ID du gagnant
@@ -12,8 +12,8 @@ export class Matchs {
 
   constructor(
     id_match: number,
-    player1: Players,
-    player2: Players,
+    player1: Player,
+    player2: Player,
     game_board: string = "---------",
     status: "pending" | "in_progress" | "finished" = "pending",
     id_winner: number | null = null,
@@ -55,7 +55,7 @@ export class Matchs {
   }
 
   // Créer un match depuis une base de données
-  static fromDB(row: any, player1: Players, player2: Players): Matchs {
+  static fromDB(row: any, player1: Player, player2: Player): Matchs {
     return new Matchs(
       row.id_match,
       player1,
@@ -81,3 +81,4 @@ export class Matchs {
     return this.fromDB(row, player1, player2);
   }
 }
+
