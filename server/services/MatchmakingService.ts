@@ -72,6 +72,8 @@ export class MatchmakingService {
       match.status = 'in_progress';
       
       const savedMatch = await this.matchRepository.save(match);
+
+      const firstPlayer = Math.random() < 0.5 ? 1 : 2;
       
       this.io.to(player1.socketId).emit(SocketEvents.MATCH_FOUND, {
         opponent: {
@@ -95,13 +97,13 @@ export class MatchmakingService {
         this.io.to(player1.socketId).emit(SocketEvents.GAME_START, {
           gameId: savedMatch.id,
           board,
-          currentTurn: 1 
+          currentTurn: firstPlayer 
         });
         
         this.io.to(player2.socketId).emit(SocketEvents.GAME_START, {
           gameId: savedMatch.id,
           board,
-          currentTurn: 1
+          currentTurn: firstPlayer
         });
       }, 1000); 
       
