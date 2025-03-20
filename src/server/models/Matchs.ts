@@ -207,6 +207,12 @@ export class Matchs {
     this.id_winner = null;
     this.current_turn = 1;
   }
+
+  // Déclarer un gagnant
+  declareWinner(winnerId: number): void {
+    this.id_winner = winnerId;
+    this.status = "finished";  // Mettre à jour l'état du match en "terminé"
+  }
 }
 
 
