@@ -34,14 +34,6 @@ class TicTacToeClient {
   }
 
   private setupSocketHandlers(): void {
-    this.socket.on('connect', () => {
-      console.log('Connected to server!');
-    });
-    
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from server');
-    });
-    
     this.socket.on(SocketEvents.MATCH_FOUND, (payload: MatchFoundPayload) => 
       this.handleMatchFound(payload));
     
