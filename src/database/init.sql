@@ -45,5 +45,3 @@ CREATE TABLE IF NOT EXISTS turns (
     FOREIGN KEY (id_match) REFERENCES matchs(id_match) ON DELETE CASCADE,
     FOREIGN KEY (id_player) REFERENCES players(id_player) ON DELETE CASCADE
 );
-
-
