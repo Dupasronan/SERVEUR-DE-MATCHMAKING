@@ -9,12 +9,13 @@ export class GameLogic {
   }
 
   // Jouer un tour et enregistrer dans Turns
+  
   static async playTurn(match: Matchs, player: Player, position: number): Promise<boolean> {
     if (!this.isValidMove(match.game_board, position)) {
       return false;
     }
 
-    // Déterminer qui joue avec "X" et "O"
+
     const isPlayer1 = player.id_player === match.player1.id_player;
     const symbol = isPlayer1 ? "X" : "O";
 
@@ -29,7 +30,7 @@ export class GameLogic {
     if (winner) {
       match.declareWinner(player.id_player);
     } else {
-      // Passer au tour suivant
+    
       match.current_turn = isPlayer1 ? match.player2.id_player : match.player1.id_player;
     }
 
