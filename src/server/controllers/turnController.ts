@@ -1,164 +1,194 @@
 import { Request, Response } from 'express';
-import { promisePool } from '../../database/connection';
-import Turns from '../models/Turns';
+import Turns from '../models/Turns'; // Assurez-vous que le chemin du fichier est correct
 
-// Création d'un tour
-export const createTurn = async (req: Request, res: Response) => {
-  const { id_match, id_player, position_played, played_at } = req.body;
-  
-  try {
-    const [result] = await promisePool.execute(
-      'INSERT INTO turns (id_match, id_player, position_played, played_at) VALUES (?, ?, ?, ?)',
-      [id_match, id_player, position_played, played_at]
-    );
-    res.status(201).json({ message: 'Turn created', result });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+class TurnController {
+
+  // Créer un tour
+  static async createTurn(req: Request, res: Response): Promise<void> {
+    const { id_match, id_player, position_played } = req.body;
+
+    if (!id_match || !id_player || position_played === undefined) {
+      res.status(400).json({ message: 'Tous les champs sont nécessaires' });
+      return;
+    }
+
+    try {
+      await Turns.createTurn(id_match, id_player, position_played);
+      res.status(201).json({ message: 'Tour créé avec succès' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la création du tour', error });
+    }
   }
-};
 
-// Récupérer tous les tours
-export const getAllTurns = async (_req: Request, res: Response) => {
-  try {
-    const [rows] = await promisePool.query('SELECT * FROM turns');
-    const turns = (rows as any[]).map(Turns.fromDB);
-    res.status(200).json(turns);
-  } catch (error) {
-    res.status(500).json({ error });
+  // Enregistrer un tour
+  static async recordTurn(req: Request, res: Response): Promise<void> {
+    const { id_match, id_player, position_played } = req.body;
+
+    if (!id_match || !id_player || position_played === undefined) {
+      res.status(400).json({ message: 'Tous les champs sont nécessaires' });
+      return;
+    }
+
+    try {
+      await Turns.recordTurn(id_match, id_player, position_played);
+      res.status(201).json({ message: 'Tour enregistré avec succès' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de l\'enregistrement du tour', error });
+    }
   }
-};
 
-// Récupérer les tours par match
-export const getTurnsByMatch = async (req: Request, res: Response) => {
-  const { id_match } = req.params;
-  try {
-    const [rows] = await promisePool.query('SELECT * FROM turns WHERE id_match = ?', [id_match]);
-    const turns = (rows as any[]).map(Turns.fromDB);
-    res.status(200).json(turns);
-  } catch (error) {
-    res.status(500).json({ error });
+  // Récupérer tous les tours
+  static async getAllTurns(req: Request, res: Response): Promise<void> {
+    try {
+      const turns = await Turns.getAllTurns();
+      res.status(200).json(turns);
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la récupération des tours', error });
+    }
   }
-};
 
-// Récupérer les tours par joueur
-export const getTurnByPlayer = async (req: Request, res: Response) => {
-  const { id_player } = req.params;
-  try {
-    const [rows] = await promisePool.query('SELECT * FROM turns WHERE id_player =?', [id_player]);
-    const turns = (rows as any[]).map(Turns.fromDB);
-    res.status(200).json(turns);
-  } catch (error) {
-    res.status(500).json({ error });
+  // Récupérer les tours par match
+  static async getTurnsByMatch(req: Request, res: Response): Promise<void> {
+    const { id_match } = req.params;
+
+    if (!id_match) {
+      res.status(400).json({ message: 'L\'ID du match est nécessaire' });
+      return;
+    }
+
+    try {
+      const turns = await Turns.getTurnsByMatch(Number(id_match));
+      res.status(200).json(turns);
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la récupération des tours par match', error });
+    }
   }
-};
 
-// Jouer les tours de manière ascendante
-export const playTurns = async (req: Request, res: Response) => {
-  try {
-    const [rows] = await promisePool.query('SELECT * FROM turns ORDER BY id_match ASC, position_played ASC');
-    const turns = (rows as any[]).map(Turns.fromDB);
-    res.status(200).json(turns);
-  } catch (error) {
-    res.status(500).json({ error });
+  // Récupérer les tours par joueur
+  static async getTurnsByPlayer(req: Request, res: Response): Promise<void> {
+    const { id_player } = req.params;
+
+    if (!id_player) {
+      res.status(400).json({ message: 'L\'ID du joueur est nécessaire' });
+      return;
+    }
+
+    try {
+      const turns = await Turns.getTurnsByPlayer(Number(id_player));
+      res.status(200).json(turns);
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la récupération des tours par joueur', error });
+    }
   }
-};
 
-// Supprimer un tour par joueur
-export const deleteTurnByPlayer = async (req: Request, res: Response) => {
-  const { id_player } = req.params;
-  try {
-    await promisePool.execute('DELETE FROM turns WHERE id_player =?', [id_player]);
-    res.status(200).json({ message: 'Turn(s) deleted' });
-  } catch (error) {
-    res.status(500).json({ error });
+  // Supprimer un tour spécifique pour un match
+  static async deleteTurnByMatch(req: Request, res: Response): Promise<void> {
+    const { id_match, id_player } = req.params;
+
+    if (!id_match || !id_player) {
+      res.status(400).json({ message: 'L\'ID du match et du joueur sont nécessaires' });
+      return;
+    }
+
+    try {
+      await Turns.deleteTurnByMatch(Number(id_match), Number(id_player));
+      res.status(200).json({ message: 'Tour supprimé avec succès' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la suppression du tour', error });
+    }
   }
-};
 
-// Supprimer les tours par match
-export const deleteTurnsByMatch = async (req: Request, res: Response) => {
-  const { id_match } = req.params;
-  try {
-    await promisePool.execute('DELETE FROM turns WHERE id_match =?', [id_match]);
-    res.status(200).json({ message: 'Turn(s) deleted' });
-  } catch (error) {
-    res.status(500).json({ error });
+  // Supprimer tous les tours d'un match
+  static async deleteTurnsByMatch(req: Request, res: Response): Promise<void> {
+    const { id_match } = req.params;
+
+    if (!id_match) {
+      res.status(400).json({ message: 'L\'ID du match est nécessaire' });
+      return;
+    }
+
+    try {
+      await Turns.deleteTurnsByMatch(Number(id_match));
+      res.status(200).json({ message: 'Tous les tours du match ont été supprimés avec succès' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la suppression des tours', error });
+    }
   }
-};
 
-// Supprimer tous les tours
-export const deleteTurns = async (_req: Request, res: Response) => {
-  try {
-    await promisePool.execute('DELETE FROM turns');
-    res.status(200).json({ message: 'All turns deleted' });
-  } catch (error) {
-    res.status(500).json({ error });
+  // Mettre à jour un tour
+  static async updateTurn(req: Request, res: Response): Promise<void> {
+    const { id_turn, position_played } = req.body;
+
+    if (!id_turn || position_played === undefined) {
+      res.status(400).json({ message: 'L\'ID du tour et la position sont nécessaires' });
+      return;
+    }
+
+    try {
+      await Turns.updateTurn(id_turn, position_played);
+      res.status(200).json({ message: 'Tour mis à jour avec succès' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la mise à jour du tour', error });
+    }
   }
-};
 
-// Quitter un tour d'un match
-export const quitTurn = async (req: Request, res: Response) => {
-  const { id_player, id_match } = req.params;
-  try {
-    await promisePool.execute('DELETE FROM turns WHERE id_player =? AND id_match =?', [id_player, id_match]);
-    res.status(200).json({ message: 'Turn quitted' });
-  } catch (error) {
-    res.status(500).json({ error });
+  // Récupérer le prochain tour pour un match
+  static async getNextTurn(req: Request, res: Response): Promise<void> {
+    const { id_match } = req.params;
+
+    if (!id_match) {
+      res.status(400).json({ message: 'L\'ID du match est nécessaire' });
+      return;
+    }
+
+    try {
+      const turn = await Turns.getNextTurn(Number(id_match));
+      res.status(200).json(turn || { message: 'Aucun prochain tour disponible pour ce match' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la récupération du prochain tour', error });
+    }
   }
-};
 
-// Démarrer un tour
-export const startTurn = async (req: Request, res: Response) => {
-  const { id_match } = req.params;
-  try {
-    const [result] = await promisePool.execute(
-      'INSERT INTO turns (id_match, id_player, position_played) VALUES (?, (SELECT id_player FROM players WHERE is_ready = 1 AND id_match =? LIMIT 1), 1)',
-      [id_match, id_match]
-    );
-    res.status(201).json({ message: 'Turn started', result });
-  } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+  // Récupérer le dernier tour joué pour un joueur
+  static async getLastTurnByPlayer(req: Request, res: Response): Promise<void> {
+    const { id_player } = req.params;
+
+    if (!id_player) {
+      res.status(400).json({ message: 'L\'ID du joueur est nécessaire' });
+      return;
+    }
+
+    try {
+      const turn = await Turns.getLastTurnByPlayer(Number(id_player));
+      res.status(200).json(turn || { message: 'Aucun dernier tour disponible pour ce joueur' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la récupération du dernier tour', error });
+    }
   }
-};
 
-// Mettre à jour un tour
-export const updateTurn = async (req: Request, res: Response) => {
-  const { id_turn } = req.params;
-  const { position_played } = req.body;
-  try {
-    await promisePool.execute('UPDATE turns SET position_played = ? WHERE id_turn = ?', [position_played, id_turn]);
-    res.status(200).json({ message: 'Turn updated' });
-  } catch (error) {
-    res.status(500).json({ error });
+  // Récupérer le dernier tour joué pour un match
+  static async getLastTurnByMatch(req: Request, res: Response): Promise<void> {
+    const { id_match } = req.params;
+
+    if (!id_match) {
+      res.status(400).json({ message: 'L\'ID du match est nécessaire' });
+      return;
+    }
+
+    try {
+      const turn = await Turns.getLastTurnByMatch(Number(id_match));
+      res.status(200).json(turn || { message: 'Aucun dernier tour disponible pour ce match' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur lors de la récupération du dernier tour', error });
+    }
   }
-};
+}
 
-// Fonctionnalités non implémentées
-export const pauseTurn = async (_req: Request, res: Response) => {
-  res.status(200).json({ message: 'Turn paused (functionality to be implemented)' });
-};
+export default TurnController;
 
-export const resumeTurn = async (_req: Request, res: Response) => {
-  res.status(200).json({ message: 'Turn resumed (functionality to be implemented)' });
-};
 
-export const replayTurn = async (_req: Request, res: Response) => {
-  res.status(200).json({ message: 'Turn replayed (functionality to be implemented)' });
-};
 
-export const endTurn = async (_req: Request, res: Response) => {
-  res.status(200).json({ message: 'Turn ended (functionality to be implemented)' });
-};
 
-// Supprimer un tour spécifique
-export const deleteTurn = async (req: Request, res: Response) => {
-  const { id_turn } = req.params;
-  try {
-    await promisePool.execute('DELETE FROM turns WHERE id_turn = ?', [id_turn]);
-    res.status(200).json({ message: 'Turn deleted' });
-  } catch (error) {
-    res.status(500).json({ error });
-  }
-};
 
 
 
