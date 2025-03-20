@@ -1,29 +1,31 @@
 import { Router } from 'express';
-import { PlayerController } from '../controllers/playerController';
+import { PlayerController } from '../controllers/playerController';  // Importation du PlayerController
 
-const router = Router();
+// Création de la route principale pour les joueurs
+const router: Router = Router();
 
-// Route pour inscrire un nouveau joueur
-router.post('/players', PlayerController.registerPlayer);
+// Route pour enregistrer un nouveau joueur
+router.post('/register', PlayerController.registerPlayer);
 
 // Route pour récupérer tous les joueurs
-router.get('/players', PlayerController.getPlayers);
+router.get('/', PlayerController.getPlayers);
 
-// Route pour récupérer un joueur par ID
-router.get('/players/:playerId', PlayerController.getPlayer);
+// Route pour récupérer un joueur par son ID
+router.get('/:playerId', PlayerController.getPlayer);
 
-// Route pour mettre à jour un joueur par ID
-router.put('/players/:playerId', PlayerController.updatePlayer);
+// Route pour mettre à jour un joueur par son ID
+router.put('/:playerId', PlayerController.updatePlayer);
 
-// Route pour supprimer un joueur par ID
-router.delete('/players/:playerId', PlayerController.deletePlayer);
+// Route pour supprimer un joueur par son ID
+router.delete('/:playerId', PlayerController.deletePlayer);
 
-// Route pour récupérer un joueur par pseudo
-router.get('/players/pseudo/:pseudo', PlayerController.getPlayerByPseudo);
+// Route pour récupérer un joueur par son pseudo
+router.get('/pseudo/:pseudo', PlayerController.getPlayerByPseudo);
 
-// Route pour mettre à jour un joueur par pseudo
-router.put('/players/pseudo/:pseudo', PlayerController.updatePlayerByPseudo);
+// Route pour mettre à jour un joueur par son pseudo
+router.put('/pseudo/:pseudo', PlayerController.updatePlayerByPseudo);
 
 export default router;
+
 
 
