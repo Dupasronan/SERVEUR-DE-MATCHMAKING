@@ -18,7 +18,7 @@ export class PlayerController {
         return;
       }
 
-      const newPlayerId = await Players.create(pseudo);
+      const newPlayerId = await Players.createPlayer(pseudo);
       if (newPlayerId) {
         res.status(201).json({ message: 'Joueur inscrit avec succès.', id_player: newPlayerId });
       } else {
@@ -117,11 +117,25 @@ export class PlayerController {
     const { pseudo } = req.params;
     const { newPseudo } = req.body;
 
-    if (!pseudo || pseudo.trim().length === 0 ||!newPseudo || newPseudo.trim().length === 0) {
+    if (!pseudo || pseudo.trim().length === 0 || !newPseudo || newPseudo.trim().length === 0) {
       res.status(400).json({ message: 'Les pseudos sont requis et ne peuvent pas être vides.' });
       return;
     }
-  } 
+
+    try {
+      const player = await Players.getByPseudo(pseudo);
+      if (!player) {
+        res.status(404).json({ message: 'Joueur non trouvé.' });
+        return;
+      }
+
+      const success = await Players.updatePlayer(player.id_player, newPseudo);
+      res.status(success ? 200 : 500).json({ message: success ? 'Pseudo mis à jour avec succès.' : 'Erreur lors de la mise à jour du pseudo.' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur interne du serveur.' });
+    }
+  }
 }
+
 
 
