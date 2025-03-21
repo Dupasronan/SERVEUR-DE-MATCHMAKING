@@ -1,6 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import turnRoutes from './routes/turnRoutes';
 import matchmakingRoutes from './routes/matchmakingRoutes';
@@ -14,7 +13,7 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
 // Intégration des routes principales
 app.use('/api/turns', turnRoutes);
@@ -43,7 +42,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Démarrage du serveur
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
