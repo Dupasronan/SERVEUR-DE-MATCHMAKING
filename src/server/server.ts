@@ -6,7 +6,7 @@ import turnRoutes from './routes/turnRoutes';
 import matchmakingRoutes from './routes/matchmakingRoutes';
 import playerRoutes from './routes/playerRoutes';
 import queueRoutes from './routes/queueRoutes';
-
+import { Client } from '../client/client';
 // Configuration des variables d'environnement
 dotenv.config();
 
@@ -21,6 +21,10 @@ app.use('/api/turns', turnRoutes);
 app.use('/api/matchmaking', matchmakingRoutes);
 app.use('/api/players', playerRoutes);
 app.use('/api/queue', queueRoutes);
+
+const client = new Client(1, "http://localhost:3000/api");
+client.joinQueue(1);  
+client.getQueueStatus();
 
 // Route par défaut
 app.get('/', (req: Request, res: Response) => {
@@ -39,7 +43,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Démarrage du serveur
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
