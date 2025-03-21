@@ -30,3 +30,8 @@ class Client {
 }
 
 export { Client };
+
+// TEST: tester directement le Client
+const client = new Client(1, "http://localhost:3000/api");
+client.joinQueue(1);
+client.getQueueStatus();
